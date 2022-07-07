@@ -7,3 +7,4 @@ export * from "./messages";
 export * from "./runtime";
 export * from "./registry";
 export * from "./plugins";
+export * from "./scores";

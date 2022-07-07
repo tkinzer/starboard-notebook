@@ -73,3 +73,7 @@ export function getPropertiesPopoverIcons(cell: Cell, togglePropertyFunction: (n
     </div>
   `;
 }
+
+/**
+ * Cell linter for python modeling
+ */

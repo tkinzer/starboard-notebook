@@ -6,9 +6,9 @@
 runtime.dom.notebook.addEventListener("sb:change_cell_type", (evt) => {
     console.count("Evt type:", evt);
     if (evt.detail.newCellType === "python") {
-        alert("I don't think so 🐍");
+        console.log("I don't think so 🐍");
         evt.preventDefault();
     } else {
-        alert("I know so");
+        console.log("I know so");
     }
 })

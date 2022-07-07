@@ -53,6 +53,14 @@ export class StarboardNotebookElement extends LitElement {
   }
 
   /**
+   * Get runtime
+   * @returns this notebook's runtime
+   */
+  getRuntime() {
+    return this.runtime;
+  }
+
+  /**
    * TODO Should the AI linter be a plugin?
    * @returns
    */

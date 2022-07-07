@@ -2,6 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/. */
 
+import { StarboardLinterElement } from "./components/linter";
 import { StarboardNotebookElement } from "./components/notebook";
 import "./init";
 
@@ -9,8 +10,12 @@ const baseEl = document.createElement("base");
 baseEl.target = "_parent";
 document.head.append(baseEl);
 
+const rowContainer = document.createElement("div");
+rowContainer.id = "notebook-container";
+document.body.append(rowContainer);
+
 const notebookEl = new StarboardNotebookElement();
-document.body.append(notebookEl);
+rowContainer.appendChild(notebookEl);
 
 /**
  * TODO: Create class for AILinter
@@ -22,11 +27,12 @@ document.body.append(notebookEl);
  * scoring endpoint.
  * Endpoint URL: ... TODO
  */
-const outputEl = document.createElement("div");
-outputEl.id = "my-element";
-outputEl.style.backgroundColor = "#fdf";
-outputEl.innerHTML = `
-  <h3>AI Goverance Scores</h3>
-  <p>Run your cell to see how you score</p>
-`;
-document.body.append(outputEl);
+const outputEl = new StarboardLinterElement();
+var notebookRuntimeRef = notebookEl.getRuntime();
+outputEl.setNotebookRuntime(notebookRuntimeRef);
+
+const output = document.createElement("div");
+output.id = "my-element";
+output.appendChild(outputEl);
+
+rowContainer.appendChild(output);

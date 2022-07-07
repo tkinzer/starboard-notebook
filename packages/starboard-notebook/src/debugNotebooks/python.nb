@@ -1,21 +1,3 @@
-# %%--- [python]
-# properties:
-#   run_on_load: true
-# ---%%
-print("Hello world")
-# %%--- [python]
-# properties:
-#   run_on_load: true
-# ---%%
-class A:
-  def __init__(self):
-    self.b = "c"
-A()
-# %%--- [esm]
-# properties:
-#   run_on_load: true
-# ---%%
-pyodide
 # %% [python]
 from js import fetch
 import pandas as pd
