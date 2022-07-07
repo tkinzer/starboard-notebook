@@ -1,11 +1,15 @@
 import { html, LitElement } from "lit";
 import { customElement, property, query } from "lit/decorators.js";
-import { Cell, Runtime, ScoreResult } from "src/types";
+import { setupCommunicationWithParentFrame } from "../runtime/core";
+import { Cell, GovernanceLintError, Runtime, ScoreResult } from "src/types";
 
 @customElement("starboard-linter")
 export class StarboardLinterElement extends LitElement {
   @property({ type: Object })
   private notebookRuntime?: Runtime;
+
+  @property()
+  private eventListeners?: EventListener[];
 
   @query(".linter-container")
   private cellsParentElement!: HTMLElement;
@@ -20,14 +24,30 @@ export class StarboardLinterElement extends LitElement {
    */
   public setNotebookRuntime(runtime: Runtime) {
     this.notebookRuntime = runtime;
+    // Hook event listeners
+    setupCommunicationWithParentFrame(runtime);
   }
+
+  /**
+   * TODO: hook event listeners up to trigger cell linting on execution
+   */
+  // const changeListeners = this.notebookRuntime?.internal.listeners.cellContentChanges.get(cell.id);
+  // if (changeListeners) {
+  //   changeListeners.forEach((v) => v());
+  // }
+
+  // SET private changeListeners[]
 
   private scoreNotebookModels() {
     if (!this.notebookRuntime) return;
 
     console.log(`notebook runtime`, this.notebookRuntime);
-    const catcher = this.notebookRuntime?.consoleCatcher.hook((msg) => msg);
-    console.log(catcher);
+
+    /**
+     * TODO: Investigate usage of consoleCatcher for intercepting the rendered python / pandas
+     */
+    // const catcher = this.notebookRuntime?.consoleCatcher.hook((msg) => msg);
+    // console.log(catcher);
 
     const cells = this.notebookRuntime?.content.cells;
     cells
@@ -38,33 +58,58 @@ export class StarboardLinterElement extends LitElement {
          * TODO
          * Determine how to check the csv data import for the column/table header cells
          */
-        // const changeListeners = this.notebookRuntime?.internal.listeners.cellContentChanges.get(cell.id);
-        // if (changeListeners) {
-        //   changeListeners.forEach((v) => v());
-        // }
-
-        // SET private changeListeners[]
-
-        this.updateLinterConsoleStatus("Submitting code for scoring...");
         this.submitCodeToScore(cell);
       });
-
-    this.updateLinterConsoleStatus(`detecting responsibility triggers: ${["sex", "race"]}`);
   }
 
-  async submitCodeToScore(cell: Cell): Promise<any> {
-    const score = await fetch("http://127.0.0.1:5000/score");
-    return score;
+  /**
+   * FIX: Issue with referrer-policy in chrome.
+   * The URL below can be pinged successfully with cUrl,
+   *  but blocked when using inside the notebook in the browser.
+   * @param cell
+   */
+  submitCodeToScore(cell: Cell) {
+    (async () => {
+      const rawResponse = await fetch("http://127.0.0.1:5000/score", {
+        method: "POST",
+        body: cell.textContent, // JSON.stringify({ a: 1, b: "Textual content" }),
+      });
+      const content = await rawResponse.json();
+
+      console.log(content);
+
+      if (content.length > 0) {
+        this.lintWarning(content);
+      }
+    })();
   }
 
-  async executeJob() {
-    await alert("Confirm job execution");
-    this.updateLinterConsoleStatus("submitting job for execution");
-  }
-
-  updateLinterConsoleStatus(status: string): void {
+  lintWarning(warnings: GovernanceLintError[]) {
     const linterUpdateEl = document.querySelector("[id='linter-console-updates']");
-    if (linterUpdateEl) setTimeout(() => (linterUpdateEl.innerHTML = `${status}`), 2000);
+
+    if (warnings.length > 0 && linterUpdateEl) {
+      linterUpdateEl.innerHTML = "WARNING - issues detected";
+      warnings.forEach((w) => {
+        const appendEl = document.createElement(`p`);
+        appendEl.className = "lint-warning";
+        appendEl.innerHTML = w.message;
+        linterUpdateEl?.appendChild(appendEl);
+      });
+    } else {
+      linterUpdateEl ? (linterUpdateEl.innerHTML = "") : null;
+    }
+  }
+
+  executeJob() {
+    this.updateLinterConsole("submitting job for execution");
+  }
+
+  updateLinterConsole(status: any, type?: string): void {
+    const linterUpdateEl = document.querySelector("[id='linter-console-updates']");
+    if (linterUpdateEl) {
+      linterUpdateEl.innerHTML = `${status}`;
+      linterUpdateEl.className += ` ${type}`;
+    }
   }
 
   render() {
@@ -76,7 +121,7 @@ export class StarboardLinterElement extends LitElement {
         </div>
 
         <div class="linter-console">
-          <span id="linter-console-updates">No Governance Issues Detected</span>
+          <p id="linter-console-updates">No Governance Issues Detected</p>
         </div>
       </div>
     `;
@@ -89,5 +134,6 @@ export class StarboardLinterElement extends LitElement {
  * @returns
  */
 export function fuzzyDataImportMatcher(text: string): boolean {
-  return text.indexOf("import") >= 0;
+  // FIXME: the second validation check should probably not be 'read_'.
+  return text.indexOf("import pandas") >= 0 && text.indexOf("read_") >= 0;
 }

@@ -6,3 +6,10 @@ export type ScoreResult<Name extends string, Score, ScoreType> = {
   scoreValue: Score;
   payload: ScoreType;
 };
+
+export type GovernanceLintError = {
+  line_num: string;
+  cell_id: string;
+  message: string;
+  url: string;
+};

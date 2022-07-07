@@ -1,4 +1,14 @@
 # %% [python]
+import pandas as pd
+import matplotlib.pyplot as plt
+import pyodide
+
+url = "https://raw.githubusercontent.com/selva86/datasets/master/mtcars.csv"
+
+# Prepare Data
+df = pd.read_csv(pyodide.open_url(url))
+
+# %% [python]
 from js import fetch
 import pandas as pd
 import io
