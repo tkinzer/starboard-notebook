@@ -1,7 +1,7 @@
 import { html, LitElement } from "lit";
 import { customElement, property, query } from "lit/decorators.js";
-import { setupCommunicationWithParentFrame } from "../runtime/core";
-import { Cell, GovernanceLintError, Runtime, ScoreResult } from "src/types";
+import { Cell, GovernanceLintError, OutboundNotebookMessage, Runtime } from "src/types";
+import { CellElement } from "./cell";
 
 @customElement("starboard-linter")
 export class StarboardLinterElement extends LitElement {
@@ -18,14 +18,66 @@ export class StarboardLinterElement extends LitElement {
     return this;
   }
 
+  subscribeToAllCellChanges(cells: Cell[]) {
+    cells.forEach((c) =>
+      this.notebookRuntime?.controls.subscribeToCellChanges(c.id, () => {
+        console.log(`subscribing to cell change ${c.id}`);
+      })
+    );
+  }
+
+  subscribeToCellRunning(cells: CellElement[]) {
+    cells.forEach((c) => {
+      if (c.isUpdatePending) {
+        console.log("cell update pending", c.id);
+      }
+    });
+  }
+
   /**
    * FIX: We should be able to access the notebook runtime globally instead of passing it
    * during initialization
    */
   public setNotebookRuntime(runtime: Runtime) {
     this.notebookRuntime = runtime;
-    // Hook event listeners
-    setupCommunicationWithParentFrame(runtime);
+    const cells = runtime.content.cells;
+    // Subscribe to cell changes
+    this.subscribeToAllCellChanges(cells);
+    this.subscribeToCellRunning(runtime.dom.cells);
+
+    runtime.dom.notebook.addEventListener("sb:run_cell", (evt) => {
+      console.count("Evt type:" + evt);
+      console.log(evt);
+      if (evt) {
+        const cellId = evt.detail.id;
+        const cell = runtime.dom.getCellById(cellId);
+        const cellContent = cell?.textContent;
+        if (cellContent) {
+          this.submitCodeToScore(cell);
+        }
+      }
+    });
+
+    /**
+     * TODO: Figure out how to capture run events of a cell instead of every change to any cell in a notebook.
+     * Hack? Compare the old data.payload.content to the current data.payload.content and determine which cell(s) changed
+     *  based on the differences in the module content section.
+     */
+    // window.addEventListener(
+    //   "message",
+    //   (event) => {
+    //     if (event.data) {
+    //       const msg = event.data as OutboundNotebookMessage;
+    //       switch (msg.type) {
+    //         case "NOTEBOOK_CONTENT_UPDATE": {
+    //           console.log("event captured", event);
+    //           break;
+    //         }
+    //       }
+    //     }
+    //   },
+    //   false
+    // );
   }
 
   /**
@@ -54,6 +106,8 @@ export class StarboardLinterElement extends LitElement {
       ?.filter((c) => c.cellType === "python" && fuzzyDataImportMatcher(c.textContent))
       .forEach((cell) => {
         console.log("foundNotebookDataImports", cell);
+        // this.notebookRuntime?.controls.runCell({ id: cell.id });
+
         /**
          * TODO
          * Determine how to check the csv data import for the column/table header cells
@@ -68,15 +122,25 @@ export class StarboardLinterElement extends LitElement {
    *  but blocked when using inside the notebook in the browser.
    * @param cell
    */
-  submitCodeToScore(cell: Cell) {
+  submitCodeToScore(cell: CellElement | Cell) {
     (async () => {
-      const rawResponse = await fetch("http://127.0.0.1:5000/score", {
-        method: "POST",
-        body: cell.textContent, // JSON.stringify({ a: 1, b: "Textual content" }),
-      });
-      const content = await rawResponse.json();
+      console.warn("submitting code to score", cell);
+      const headers = new Headers();
+      headers.append("Accept", "application/json");
+      headers.append("Content-Type", "application/json"); // This one sends body
 
-      console.log(content);
+      const bodyPayload = { cellId: cell.id, textContent: cell.textContent };
+      const body = JSON.stringify(bodyPayload);
+      console.log("sending body", bodyPayload);
+      const content = await fetch("http://127.0.0.1:5000/score", {
+        method: "POST",
+        // headers: headers,
+        body,
+      })
+        .then((rawResponse) => rawResponse.json())
+        .catch((e) => console.error(e));
+
+      console.log("api response", content);
 
       if (content.length > 0) {
         this.lintWarning(content);
@@ -95,13 +159,18 @@ export class StarboardLinterElement extends LitElement {
         appendEl.innerHTML = w.message;
         linterUpdateEl?.appendChild(appendEl);
       });
-    } else {
-      linterUpdateEl ? (linterUpdateEl.innerHTML = "") : null;
     }
   }
 
   executeJob() {
     this.updateLinterConsole("submitting job for execution");
+  }
+
+  clearLinterConsole() {
+    const linterUpdateEl = document.querySelector("[id='linter-console-updates']");
+    if (linterUpdateEl) {
+      linterUpdateEl.innerHTML = ``;
+    }
   }
 
   updateLinterConsole(status: any, type?: string): void {

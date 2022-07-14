@@ -15,6 +15,20 @@ rowContainer.id = "notebook-container";
 document.body.append(rowContainer);
 
 const notebookEl = new StarboardNotebookElement();
+notebookEl.addEventListener(
+  "message",
+  (event) => {
+    if (event) {
+      switch (event.type) {
+        case "NOTEBOOK_SET_METADATA": {
+          console.log("notbook set metadata");
+          break;
+        }
+      }
+    }
+  },
+  false
+);
 rowContainer.appendChild(notebookEl);
 
 /**
@@ -28,7 +42,7 @@ rowContainer.appendChild(notebookEl);
  * Endpoint URL: ... TODO
  */
 const outputEl = new StarboardLinterElement();
-var notebookRuntimeRef = notebookEl.getRuntime();
+const notebookRuntimeRef = notebookEl.getRuntime();
 outputEl.setNotebookRuntime(notebookRuntimeRef);
 
 const output = document.createElement("div");
