@@ -64,7 +64,14 @@
     "rich-markdown-editor": "^11.18.6",
     "styled-components": "5.3.3"
   },
-  "gitHead": "",
   "author": "Tim Kinzer",
-  "license": "ISC"
+  "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tkinzer/starboard-notebook.git"
+  },
+  "bugs": {
+    "url": "https://github.com/tkinzer/starboard-notebook/issues"
+  },
+  "homepage": "https://github.com/tkinzer/starboard-notebook#readme"
 }
