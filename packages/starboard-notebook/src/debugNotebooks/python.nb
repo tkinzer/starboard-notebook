@@ -1,28 +1,30 @@
 # %%--- [python]
 # properties:
-#   run_on_load: true
+#   run_on_load: false
 # ---%%
-print("Hello world")
-# %%--- [python]
-# properties:
-#   run_on_load: true
-# ---%%
-class A:
-  def __init__(self):
-    self.b = "c"
-A()
-# %%--- [esm]
-# properties:
-#   run_on_load: true
-# ---%%
-pyodide
-# %% [python]
-from js import fetch
 import pandas as pd
-import io
+import matplotlib.pyplot as plt
+import pyodide
 
-response = await fetch("https://cdn.jsdelivr.net/gh/selva86/datasets/mtcars.csv")
-csv = await response.text()
+url = "https://raw.githubusercontent.com/selva86/datasets/master/mtcars.csv"
 
-df = pd.read_csv(io.StringIO(csv))
-df
+# Prepare Data
+df = pd.read_csv(pyodide.open_url(url))
+
+# %%--- [markdown]
+/**
+   * Send a message to the parent iframe through the iframeResizer library.
+   * Optionally you can pass the only target origin you want the message to be sent to, see the iframeresizer docs.
+   * Returns whether a listening parent iframe is present (and thus if the message could be sent).
+   */
+  sendMessage(message: OutboundNotebookMessage, opts?: { targetOrigin?: string }): boolean;
+
+  The following events can be included in the options object attached to the iframed page.
+
+onMessage
+type: function (message)
+Receive message posted from the parent page with the iframe.iFrameResizer.sendMessage() method.
+
+onReady
+type: function()
+This function is called once iFrame-Resizer has been initialized after receiving a call from the parent page. If you need to call any of the parentIFrame methods during page load, then they should be called from this event handler.

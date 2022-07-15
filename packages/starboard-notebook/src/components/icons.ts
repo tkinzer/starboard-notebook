@@ -24,3 +24,7 @@ export function StarboardLogo({ width = 24, height = 24, hidden = false, title =
     </g>
   </svg>`;
 }
+
+/**
+ * TODO Add Warning and Success Icons
+ */

@@ -34,6 +34,7 @@ $border-radius: var(--border-radius);
 @import "./console-output.scss";
 @import "./prosemirror.scss";
 @import "./math.scss";
+@import "./linter.scss";
 
 :root {
   --font-sans: "Inter var", BlinkMacSystemFont, -apple-system, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell",
@@ -129,6 +130,7 @@ html {
   font-variant-ligatures: contextual common-ligatures;
   font-feature-settings: "kern" 1, "liga" 1, "calt" 1, "cv10" 1;
   display: flex;
+  flex-direction: row;
 }
 
 html,
@@ -137,13 +139,16 @@ body {
   height: auto;
   margin: 0;
   padding: 0;
+  background-color: #3d3d3d;
 }
 
 starboard-notebook {
   display: flex;
   flex-direction: column;
+  color: #62d199;
   min-height: 100%;
   font-family: var(--font-sans);
+  padding: 1rem;
 }
 
 b {

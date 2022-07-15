@@ -1,10 +1,14 @@
 # %%--- [esm]
 # properties:
 #   run_on_load: true
+#   passive: true
 # ---%%
 runtime.dom.notebook.addEventListener("sb:change_cell_type", (evt) => {
+    console.count("Evt type:", evt);
     if (evt.detail.newCellType === "python") {
-        alert("I don't think so 🐍");
+        console.log("I don't think so 🐍");
         evt.preventDefault();
+    } else {
+        console.log("I know so");
     }
 })

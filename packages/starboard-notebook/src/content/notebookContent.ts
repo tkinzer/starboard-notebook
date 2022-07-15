@@ -87,6 +87,9 @@ export function changeCellType(nb: NotebookContent, id: string, newCellType: str
   const newCell = textToNotebookContent(cellAsString).cells[0];
   const didChange = newCell.cellType !== newCellType;
 
+  if (didChange) {
+    console.log("cell type changed", newCell.cellType);
+  }
   newCell.cellType = newCellType;
   nb.cells.splice(idx, 1, newCell);
 

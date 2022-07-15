@@ -145,6 +145,11 @@ export class CellElement extends LitElement {
     }
   }
 
+  /**
+   * TODO: Add Event Emitters for cell running and updating.
+   * @returns
+   */
+
   render() {
     const id = this.cell.id;
 

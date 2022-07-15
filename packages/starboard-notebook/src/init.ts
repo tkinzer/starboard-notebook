@@ -27,4 +27,8 @@ window.svg = lit.svg;
 window.lit = lit;
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
-// window.initialNotebookContent = require("./debugNotebooks/python.nb").default;
+/**
+ * Determine if the cell is preloaded with code
+ */
+console.count("parse notebook initial content");
+window.initialNotebookContent = require("./debugNotebooks/python.nb").default;
