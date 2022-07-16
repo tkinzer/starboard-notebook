@@ -1,6 +1,6 @@
 import { html, LitElement } from "lit";
-import { customElement, property, query } from "lit/decorators.js";
-import { Cell, GovernanceLintError, OutboundNotebookMessage, Runtime } from "src/types";
+import { customElement, property } from "lit/decorators.js";
+import { Cell, GovernanceLintError, Runtime } from "src/types";
 import { CellElement } from "./cell";
 
 @customElement("starboard-linter")
@@ -8,30 +8,8 @@ export class StarboardLinterElement extends LitElement {
   @property({ type: Object })
   private notebookRuntime?: Runtime;
 
-  @property()
-  private eventListeners?: EventListener[];
-
-  @query(".linter-container")
-  private cellsParentElement!: HTMLElement;
-
   createRenderRoot() {
     return this;
-  }
-
-  subscribeToAllCellChanges(cells: Cell[]) {
-    cells.forEach((c) =>
-      this.notebookRuntime?.controls.subscribeToCellChanges(c.id, () => {
-        console.log(`subscribing to cell change ${c.id}`);
-      })
-    );
-  }
-
-  subscribeToCellRunning(cells: CellElement[]) {
-    cells.forEach((c) => {
-      if (c.isUpdatePending) {
-        console.log("cell update pending", c.id);
-      }
-    });
   }
 
   /**
@@ -39,12 +17,6 @@ export class StarboardLinterElement extends LitElement {
    * during initialization
    */
   public setNotebookRuntime(runtime: Runtime) {
-    this.notebookRuntime = runtime;
-    const cells = runtime.content.cells;
-    // Subscribe to cell changes
-    this.subscribeToAllCellChanges(cells);
-    this.subscribeToCellRunning(runtime.dom.cells);
-
     runtime.dom.notebook.addEventListener("sb:run_cell", (evt) => {
       console.count("Evt type:" + evt);
       console.log(evt);
@@ -57,138 +29,75 @@ export class StarboardLinterElement extends LitElement {
         }
       }
     });
-
-    /**
-     * TODO: Figure out how to capture run events of a cell instead of every change to any cell in a notebook.
-     * Hack? Compare the old data.payload.content to the current data.payload.content and determine which cell(s) changed
-     *  based on the differences in the module content section.
-     */
-    // window.addEventListener(
-    //   "message",
-    //   (event) => {
-    //     if (event.data) {
-    //       const msg = event.data as OutboundNotebookMessage;
-    //       switch (msg.type) {
-    //         case "NOTEBOOK_CONTENT_UPDATE": {
-    //           console.log("event captured", event);
-    //           break;
-    //         }
-    //       }
-    //     }
-    //   },
-    //   false
-    // );
   }
 
   /**
-   * TODO: hook event listeners up to trigger cell linting on execution
+   * Method to run all notebook cells and score each cell.
+   * @returns void
    */
-  // const changeListeners = this.notebookRuntime?.internal.listeners.cellContentChanges.get(cell.id);
-  // if (changeListeners) {
-  //   changeListeners.forEach((v) => v());
-  // }
-
-  // SET private changeListeners[]
-
   private scoreNotebookModels() {
     if (!this.notebookRuntime) return;
 
-    console.log(`notebook runtime`, this.notebookRuntime);
-
-    /**
-     * TODO: Investigate usage of consoleCatcher for intercepting the rendered python / pandas
-     */
-    // const catcher = this.notebookRuntime?.consoleCatcher.hook((msg) => msg);
-    // console.log(catcher);
-
-    const cells = this.notebookRuntime?.content.cells;
-    cells
+    this.notebookRuntime?.content.cells
       ?.filter((c) => c.cellType === "python" && fuzzyDataImportMatcher(c.textContent))
-      .forEach((cell) => {
-        console.log("foundNotebookDataImports", cell);
-        // this.notebookRuntime?.controls.runCell({ id: cell.id });
+      .forEach((cell) => this.submitCodeToScore(cell));
+  }
 
-        /**
-         * TODO
-         * Determine how to check the csv data import for the column/table header cells
-         */
-        this.submitCodeToScore(cell);
-      });
+  formatPayload(payload: string) {
+    return payload.replace(/\\n/g, "").replace(/\s+/g, "");
   }
 
   /**
    * FIX: Issue with referrer-policy in chrome.
    * The URL below can be pinged successfully with cUrl,
    *  but blocked when using inside the notebook in the browser.
+   * HACK-around: Add chrome extension for CORS support.
    * @param cell
    */
   submitCodeToScore(cell: CellElement | Cell) {
     (async () => {
-      console.warn("submitting code to score", cell);
-      const headers = new Headers();
-      headers.append("Accept", "application/json");
-      headers.append("Content-Type", "application/json"); // This one sends body
-
+      // FIX: process.env.API_URL is not defined in the notebook.
+      const host = "http://127.0.0.1:5000";
+      const url = `${host}/score`;
       const bodyPayload = { cellId: cell.id, textContent: cell.textContent };
-      const body = JSON.stringify(bodyPayload);
-      console.log("sending body", bodyPayload);
-      const content = await fetch("http://127.0.0.1:5000/score", {
+      const body = this.formatPayload(JSON.stringify(bodyPayload));
+      await fetch(url, {
         method: "POST",
         // headers: headers,
         body,
-      })
-        .then((rawResponse) => rawResponse.json())
-        .catch((e) => console.error(e));
-
-      console.log("api response", content);
-
-      if (content.length > 0) {
-        this.lintWarning(content);
-      }
+      }).then((rawResponse) => this.generateLintWarnings(Promise.resolve(rawResponse.json())));
     })();
   }
 
-  lintWarning(warnings: GovernanceLintError[]) {
-    const linterUpdateEl = document.querySelector("[id='linter-console-updates']");
+  generateLintWarnings(warnings: Promise<GovernanceLintError[]>, selector?: string) {
+    // For demo purposes, we'll just log the warnings to the console that we add to the document.
+    const linterUpdateEl = document.querySelector(selector ?? "[id='linter-console-updates']");
 
-    if (warnings.length > 0 && linterUpdateEl) {
-      linterUpdateEl.innerHTML = "WARNING - issues detected";
-      warnings.forEach((w) => {
-        const appendEl = document.createElement(`p`);
-        appendEl.className = "lint-warning";
-        appendEl.innerHTML = w.message;
-        linterUpdateEl?.appendChild(appendEl);
+    const items: GovernanceLintError[] = [];
+    if (linterUpdateEl) {
+      warnings.then((warnings) => {
+        if (warnings.length > 0) {
+          linterUpdateEl.innerHTML = "";
+          linterUpdateEl.append(`WARNING - ${warnings.length} Governance Issues Detected`);
+
+          const linterItems = warnings.map((warning) => {
+            const linterItem = document.createElement("div");
+            const itemText = `${warning.cell_id}:ln${warning.line_num} ${warning.message}.`;
+            items.push(warning);
+            linterItem.innerHTML = `<p>${itemText} <a href="${warning.url}" target="_blank">Learn more</a></p>`;
+            return linterItem;
+          });
+          linterUpdateEl.append(...linterItems);
+        }
       });
     }
-  }
 
-  executeJob() {
-    this.updateLinterConsole("submitting job for execution");
-  }
-
-  clearLinterConsole() {
-    const linterUpdateEl = document.querySelector("[id='linter-console-updates']");
-    if (linterUpdateEl) {
-      linterUpdateEl.innerHTML = ``;
-    }
-  }
-
-  updateLinterConsole(status: any, type?: string): void {
-    const linterUpdateEl = document.querySelector("[id='linter-console-updates']");
-    if (linterUpdateEl) {
-      linterUpdateEl.innerHTML = `${status}`;
-      linterUpdateEl.className += ` ${type}`;
-    }
+    return items;
   }
 
   render() {
     return html`
       <div class="linter-container">
-        <div class="linter-actions">
-          <button @click=${this.scoreNotebookModels}>Run Cells</button>
-          <button @click=${this.executeJob}>Submit Job for Execution</button>
-        </div>
-
         <div class="linter-console">
           <p id="linter-console-updates">No Governance Issues Detected</p>
         </div>

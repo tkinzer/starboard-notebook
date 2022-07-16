@@ -12,5 +12,8 @@
   },
   "devDependencies": {
     "lerna": "^4.0.0"
+  },
+  "dependencies": {
+    "pandas": "^0.0.3"
   }
 }
