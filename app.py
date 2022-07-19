@@ -28,54 +28,35 @@ def lintCellTextContent(cell):
     searchText = dict['textContent'] 
     keywords = ["sex", "race"]
     patterns = ["[^a-zA-Z0-9_]", "import pandas", "read_csv", "http", "pandas.DataFrame", "pandas.read_csv"]
-    
-    # METHOD 1 - FAIL
-    # matches = [found for found in re.recuiter(r"pandas", data.textContent)]
-    # if len(matches) > 0:
-    #     for (i, pattern) in enumerate(patterns):
-    #         match = re.search(pattern, data.textContent)
-    #               if match:
-    #         ln = match.span()[0]
-    #         id = i
-    #         col = i
-    #         msg = "pandas come in all shapes, colors, and sizes - use the DataFrame constructor to create a DataFrame from an existing array-like object, a sequence of tuples, a dictionary, or an already-constructed pandas object"
-    #         url = "www.takecontrol.ai/explanation"
-    #         payload.append({"ln": ln, "id": id, "col": col, "msg": msg, "url": url})
 
     # METHOD 2
-    # TODO: test using patterns to do regex all at once 
-    #  ex. re.search(patterns, searchText, re.IGNORECASE)
-    hasReadCsv = re.search(r"read_csv", searchText, re.IGNORECASE)
-    if hasReadCsv:
-        # FIXME: Currently, this is the index of the character, not the line number
-        ln = hasReadCsv.span()[0]
-        msg = "Read CSV"
-        id = dict['cellId']
-        payload.append({"line_num": ln, "cell_id": id, "col_num": col, "message": msg, "url": url})
-        print(payload)
-
-    # check for url in cell
-    hasUrl = re.search(r"http", searchText, re.IGNORECASE)
-    if hasUrl:
-        startIdx = hasUrl.span()[0]
-        endIdx = re.search(r".csv", searchText, re.IGNORECASE).span()[1]
-        url = searchText[startIdx:endIdx]
-        print('found url to import for panda: ' + url)
-        ln = hasUrl.span()[0]
-        msg = "URL"
-        payload.append({"line_num": ln, "cell_id": id, "col_num": col, "message": msg, "url": url})
-
+    # Check for patterns that would indicate the code is creating a dataframe using pandas.
+    # If the code is creating a dataframe, then check for the column headers that contain any of the keywords.
+    # If the column headers contain any of the keywords, then return a violation.
+    for pattern in patterns:
+        if re.search(pattern, searchText):
+            print ("found pattern: " + pattern)
+            url = extractUrl(searchText)
+            df = pd.read_csv(url)
+            cols = df.columns
+            for col in cols:
+                for keyword in keywords:
+                    if keyword in col:
+                        print ("found keyword: " + keyword)
+                        ln = dict['lineNumber']
+                        id = dict['cellId']
+                        col = col
+                        msg = "Column header contains a keyword: " + keyword
+                        url = "www.takecontrol.ai/explanation"
+                        payload.append({"line_num": ln, "cell_id": id, "column_name": col, "message": msg, "url": url})
+                        break
     return payload
 
-# The payload is a JSON object with the following fields:
-#   - lintItem[].line_num: the line number of the cell
-#   - lintItem[].cell_id: the cell number of the cell
-#   - lintItem[].column_name: the name of the column
-#   - lintItem[].message: the message to display
-#   - lintItem[].url: the URL to display
-# @app.route('/format-cell-text', methods=['POST'])
-# re.sub(pattern_1 | pattern_2, replacement, string, count=0, flags=0)
-def useRegex(input):
+def extractUrl(input):
+    pattern = re.compile(r"http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+", re.IGNORECASE)
+    return re.findall(pattern, input);
+
+def useRegexFormatter(input):
     patternNewline = re.compile(r"\\n", re.IGNORECASE)
     patternComma = re.compile(r",", re.IGNORECASE)
     patternQuote = re.compile(r"\"", re.IGNORECASE)
