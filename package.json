@@ -7,7 +7,6 @@
   "scripts": {
     "bootstrap": "lerna bootstrap",
     "build": "lerna run build --sort",
-    "lerna": "lerna",
     "server:start": "flask run --host=0.0.0.0"
   },
   "devDependencies": {
