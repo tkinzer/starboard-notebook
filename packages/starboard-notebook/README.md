@@ -36,3 +36,7 @@ yarn run build:stats
 yarn test
 yarn run nbtest
 ```
+
+## TODO
+
+Add comments and docs about next steps and discoveries.

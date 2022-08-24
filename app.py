@@ -1,7 +1,7 @@
 import ast
 from flask import Flask, jsonify, request
-import pandas as pd
-import pyodide
+# import pandas as pd
+# import pyodide
 import re
 
 app = Flask(__name__)
@@ -33,23 +33,23 @@ def lintCellTextContent(cell):
     # Check for patterns that would indicate the code is creating a dataframe using pandas.
     # If the code is creating a dataframe, then check for the column headers that contain any of the keywords.
     # If the column headers contain any of the keywords, then return a violation.
-    for pattern in patterns:
-        if re.search(pattern, searchText):
-            print ("found pattern: " + pattern)
-            url = extractUrl(searchText)
-            df = pd.read_csv(url)
-            cols = df.columns
-            for col in cols:
-                for keyword in keywords:
-                    if keyword in col:
-                        print ("found keyword: " + keyword)
-                        ln = dict['lineNumber']
-                        id = dict['cellId']
-                        col = col
-                        msg = "Column header contains a keyword: " + keyword
-                        url = "www.takecontrol.ai/explanation"
-                        payload.append({"line_num": ln, "cell_id": id, "column_name": col, "message": msg, "url": url})
-                        break
+    # for pattern in patterns:
+    #     if re.search(pattern, searchText):
+    #         print ("found pattern: " + pattern)
+    #         url = extractUrl(searchText)
+            # df = pd.read_csv(url)
+            # cols = df.columns
+            # for col in cols:
+            #     for keyword in keywords:
+            #         if keyword in col:
+                        # print ("found keyword: " + keywords[0])
+    # ln = dict['lineNumber']
+    id = dict['cellId']
+    col = col
+    msg = "Column header contains a keyword: " + keywords[0]
+    url = "www.takecontrol.ai/explanation"
+    payload.append({"line_num": ln, "cell_id": id, "column_name": col, "message": msg, "url": url})
+                        
     return payload
 
 def extractUrl(input):

@@ -1,6 +1,6 @@
 import { html, LitElement } from "lit";
 import { customElement, property } from "lit/decorators.js";
-import { Cell, GovernanceLintError, Runtime } from "src/types";
+import { Cell, Runtime } from "src/types";
 import { CellElement } from "./cell";
 
 @customElement("starboard-linter")
@@ -57,7 +57,7 @@ export class StarboardLinterElement extends LitElement {
   submitCodeToScore(cell: CellElement | Cell) {
     (async () => {
       // FIX: process.env.API_URL is not defined in the notebook.
-      const host = "http://127.0.0.1:5000";
+      const host = "http://0.0.0.0:5001";
       const url = `${host}/score`;
       const bodyPayload = { cellId: cell.id, textContent: cell.textContent };
       const body = this.formatPayload(JSON.stringify(bodyPayload));
@@ -69,11 +69,11 @@ export class StarboardLinterElement extends LitElement {
     })();
   }
 
-  generateLintWarnings(warnings: Promise<GovernanceLintError[]>, selector?: string) {
+  generateLintWarnings(warnings: Promise<any[]>, selector?: string) {
     // For demo purposes, we'll just log the warnings to the console that we add to the document.
     const linterUpdateEl = document.querySelector(selector ?? "[id='linter-console-updates']");
 
-    const items: GovernanceLintError[] = [];
+    const items: any[] = [];
     if (linterUpdateEl) {
       warnings.then((warnings) => {
         if (warnings.length > 0) {
